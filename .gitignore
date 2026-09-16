@@ -44,3 +44,8 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+
+# Sanitized template only; all other .env files remain ignored.
+!.env.example
+*.tsbuildinfo
+/.netlify/

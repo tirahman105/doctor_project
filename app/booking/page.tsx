@@ -1,16 +1,18 @@
 "use client";
 import { useRouter } from "next/navigation";
-import Landing from "@/components/public/landing";
+import Booking from "@/components/booking/booking";
 import { useDemo } from "@/components/demo/demo-provider";
 export default function Page() {
   const demo = useDemo();
   const router = useRouter();
+  if (!demo.ready) return <p>Loading demo?</p>;
   return (
-    <Landing
-      onBook={() => router.push("/booking")}
-      onLogin={() => router.push("/login")}
-      toast=""
-      setToast={demo.notify}
+    <Booking
+      onBack={() => router.push("/")}
+      onSubmit={(a) => {
+        demo.add(a);
+        router.push("/");
+      }}
     />
   );
 }

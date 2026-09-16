@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { DemoProvider } from "@/components/demo/demo-provider";
 
 export const metadata: Metadata = {
   title: "CareBridge — Doctor Practice",
-  description: "MBBS doctor appointment, patient management and digital prescription application.",
+  description:
+    "MBBS doctor appointment, patient management and digital prescription application.",
   manifest: "/manifest.webmanifest",
   other: {
-    "codex-preview": "development", "theme-color": "#0a7568",
+    "theme-color": "#0a7568",
   },
   icons: {
     icon: "/favicon.svg",
@@ -21,7 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="bn">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <DemoProvider>{children}</DemoProvider>
+      </body>
     </html>
   );
 }
