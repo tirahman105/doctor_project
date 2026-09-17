@@ -48,3 +48,7 @@ In browser DevTools > Application > Local Storage, remove carebridge-appointment
 ## Scope
 
 No Supabase initialization, SQL migration, paid SMS request, upload processing, Netlify deployment, or remote infrastructure command is required or implemented. supabase/schema.sql is preserved for review in a future phase.
+
+## Phase 2A database preparation
+
+The application still needs no database. Optional isolated SQL tests and later manual setup are documented in [SUPABASE_SETUP.md](SUPABASE_SETUP.md). They use separate synthetic fixtures and never import or alter browser demo data. Do not apply hosted migrations until review is approved.

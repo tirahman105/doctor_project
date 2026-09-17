@@ -49,3 +49,6 @@ next-env.d.ts
 !.env.example
 *.tsbuildinfo
 /.netlify/
+
+# Isolated Phase 2A PostgreSQL test cluster/logs (never publish).
+/.phase2a-postgres/

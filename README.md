@@ -63,3 +63,7 @@ npm run format formats maintained feature files. package-lock.json remains autho
 ## Remaining production work
 
 Phase 2 starts with reviewed Supabase migrations, invite-only Supabase Auth, active staff roles, server-side checks, and tested row-level security. The SQL starter must not be treated as production-ready. Private Storage, seven-day cleanup, audited payments, paid SMS, clinical persistence, and Netlify deployment remain later work. No Supabase client, remote database connection, or deployment has been added.
+
+## Phase 2A preparation
+
+Versioned database/RLS/Storage migrations and local SQL tests are prepared under supabase/. They are not connected to the application. Read [SUPABASE_SETUP.md](SUPABASE_SETUP.md) and [schema review](supabase/SCHEMA_REVIEW.md) before approval. Do not run the legacy supabase/schema.sql. The local demo and its stored data remain unchanged. Production mode remains disabled.
