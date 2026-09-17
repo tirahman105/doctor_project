@@ -83,3 +83,102 @@ Record PASS, FAIL or NOT RUN per case, target identity, migration hashes, date a
 The six existing migrations and legacy schema are preserved. Do not amend committed migrations or reset the test DB. A migration file is atomic, but the six-file series is not. On failure inspect the ledger before retrying, particularly after a timeout. Review a forward correction separately. A harness assertion failure may leave fixtures; follow scoped archival cleanup, not rerun-until-green or automatic destructive cleanup.
 
 Official API references: [Auth password flow](https://supabase.com/docs/guides/auth/passwords), [Storage REST reference](https://supabase.com/docs/reference/self-hosting-storage/v1/upload-a-new-object), [database TLS](https://supabase.com/docs/guides/database/connecting-to-postgres). Actual hosted compatibility is an acceptance result, not inferred from these references.
+
+## Storage-only diagnostic/resume mode (historical; stopped at anonymous check)
+
+After separate approval, use:
+
+```powershell
+node --env-file=.env.local scripts/hosted-acceptance/run.mjs storage-resume --confirm=TEST:<TEST_PROJECT_REFERENCE>:storage-resume
+```
+
+This is NOT a read-only command. It validates the existing ignored journal locally, signs in existing synthetic users, and reads profiles, appointment/patient relationships, upload metadata and private object bytes before Storage mutations. Auth login itself creates sessions. Exactly one journal must match the configured project; corrupt, ambiguous, duplicated or incomplete fixture records are rejected. No new patient, appointment, payment, prescription or Auth user is created.
+
+The existing main upload must be unexpired, owned by Assistant A, linked to the journal's original appointment/patient, and either pending with absent/exact synthetic bytes or available with exact synthetic bytes. Auxiliary upload rows must be pending with no objects. Unjournaled rows on that appointment stop the run. Pending uploads can be completed after byte validation; already available uploads skip the pending/upload/completion steps, which are not reported as new passes. Missing auxiliary metadata can be registered and appended to the SAME journal.
+
+Remaining groups probe access, signing, overwrite/upsert/move/delete denial, size/MIME rejection, and Doctor-only retention extension. Negative mutation probes may have effects if a protection is broken: the run stops immediately. No cleanup or policy change is automated. A permanent ignored .storage-resume.started marker is created before the first mutation-capable probe. It blocks another mutation attempt after success, failure or timeout; do not remove it without a separate state review. The password-update marker is never touched. Do not run other fixture writers concurrently.
+
+Reports contain only fixed step, PASS/FAIL, allowlisted classification and numeric HTTP status when available. Transport errors/body parse failures cannot expose raw response details. Object-preflight steps distinguish main/move/limits objects without printing paths or IDs. Hosted response compatibility and current object state remain unverified until execution is approved. A failed journal write or ambiguous response may leave an unjournaled record; the next preflight rejects that mismatch. Neither test-project purpose nor production identity can be inferred remotely: the configured production denylist must remain accurate.
+
+## Targeted anonymous read-only follow-up
+
+Prepared command, requiring separate execution approval:
+
+~~~powershell
+node --env-file=.env.local scripts/hosted-acceptance/run.mjs storage-anonymous-probe --confirm=TEST:<TEST_PROJECT_REFERENCE>:storage-anonymous-probe
+~~~
+
+Uses the same unique journal and positive owner/Doctor reads of an available, unexpired, byte-matching object. Then tests missing Authorization separately from a valid project anon-key Bearer request. Only GET requests are made to Storage/Data API; Auth password login creates sessions. No upload, completion, registration, signing, retention, cleanup, journal write or attempt-marker change occurs. Pending/incompatible objects stop the probe.
+
+HTTP 400 alone is never proof of denial. Only allowlisted AccessDenied/legacy unauthorized or hidden-object NoSuchKey/not_found categories with a successful same-object positive control count. Exact missing-bearer messages are non-authoritative in the missing-header case and fail in the Bearer case; they never prove anon-role RLS. Invalid JWT, malformed request, wrong bucket/tenant, unclassified bodies and server errors fail closed. Provider messages/codes are mapped internally and never printed. No Storage policy change is warranted from the previous generic 400 result alone.
+
+Reference: Supabase Storage error codes, https://supabase.com/docs/guides/storage/debugging/error-codes .
+
+
+A missing-header HTTP 400 with InvalidRequest is now reported as
+REJECTED_NON_AUTHORITATIVE, never as an RLS PASS. The combined anonymous probe
+continues to the Bearer check. Unknown and credential errors still fail.
+To skip the missing-header check use mode storage-anonymous-bearer-probe with
+confirmation TEST:<TEST_PROJECT_REFERENCE>:storage-anonymous-bearer-probe.
+Journal, target, state and owner/Doctor read controls remain required. Data and
+Storage requests are GET-only; Auth sign-ins create sessions. No attempt marker
+or journal is changed. Only recognized authorization denial passes the Bearer check.
+
+
+## Remaining Storage continuation ? NOT EXECUTED; deferred to pre-production
+
+Command (replace the reference privately):
+
+~~~powershell
+node --env-file=.env.local scripts/hosted-acceptance/run.mjs storage-remaining-v1 --confirm=TEST:<TEST_PROJECT_REFERENCE>:storage-remaining-v1
+~~~
+
+This confirmation reviews the new one-time remaining-storage attempt. The command
+reuses the single matching journal, validates identities, metadata, expiry, ownership
+and exact owner/Doctor bytes, and requires the main upload to be available and not
+previously retained. It skips prior fixture/JWT groups and anonymous checks.
+It runs listing, signing, overwrite/upsert, move (including absent destination before
+and after), size/MIME with absence checks, Assistant retention denial, same-date and
+90-day-cap rejection, then Doctor retention and a metadata read-back. It makes no
+DELETE requests. Public URL and delete-denial checks are outside this targeted scope.
+
+Missing auxiliary move/limit metadata is registered and appended to the existing
+journal; existing compatible pending auxiliaries are reused. No old fixture is
+recreated. Synthetic uploads attempted for size/MIME should be denied, but can create
+objects if enforcement is broken. Signing and other negative mutations can likewise
+have effects on a broken target; the harness stops immediately and never cleans up.
+
+Before signing or any mutation, an exclusive .storage-remaining-v1.started marker
+records the journal digest and optional old .storage-resume.started digest. Old
+markers remain byte-for-byte unchanged; unknown journal-associated markers, changed
+history or an existing continuation marker stop execution. Marker inspection occurs
+before login and is repeated when claiming the attempt. Auth sign-ins create sessions.
+After any stop, retain all journals/markers and review state; never rerun blindly.
+
+Expiry coverage here: unexpired preflight, rejection of non-extension and beyond-90-day
+values, and a valid extension. Actual post-expiry download denial and refusal to revive
+an expired upload require a later read-only/narrowly reviewed check after natural
+expiry. No timestamp backdating, sleep-based clock simulation or remote policy edits
+are performed. These prepared checks are not a claim that hosted Storage has passed.
+
+
+## Phase 2B-1 closeout
+
+Testing is stopped at the user-approved boundary. No further hosted execution is
+authorized by this closeout or its commit message. storage-remaining-v1 is NOT
+EXECUTED and retained only for separately approved pre-production testing.
+
+User-reported hosted evidence: all six migrations applied individually; all 13
+verification checks passed; the ten JWT/PostgREST groups through backend booking
+passed; owner/Doctor reads and other-Assistant/outsider denial passed. The isolated
+valid anonymous Bearer probe passed with authorization_denied (HTTP 400). The
+missing-header rejection is non-authoritative and is not an RLS acceptance pass.
+
+Listing, signing, overwrite/upsert, move and destination handling, size/MIME, and
+retention continuation remain unexecuted. Natural post-expiry denial, public URL
+and delete-denial checks, and two-session concurrency still need hosted evidence.
+Do not describe this checkpoint as full hosted acceptance or production readiness.
+No policies were weakened. Private journals and attempt markers remain ignored
+and preserved locally. No remote cleanup, deployment or Phase 2B-2 UI connection
+was performed as part of closeout. Local unit tests use mocks; they do not replace
+these outstanding hosted checks.

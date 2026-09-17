@@ -1,5 +1,5 @@
 import fs from "node:fs";
-export const modes = ["verify", "acceptance", "concurrency"];
+export const modes = ["verify", "acceptance", "concurrency", "storage-resume", "storage-anonymous-probe", "storage-anonymous-bearer-probe", "storage-remaining-v1"];
 const fail = () => {
   throw new Error(
     "Hosted acceptance configuration rejected. Review the local preparation README; values are never echoed.",
@@ -40,7 +40,7 @@ export function target(env, args) {
     fail();
   // Direct connections only; poolers/custom domains need a separately reviewed binding.
   let database;
-  if (mode !== "acceptance") {
+  if (!["acceptance", "storage-resume", "storage-anonymous-probe", "storage-anonymous-bearer-probe", "storage-remaining-v1"].includes(mode)) {
     try {
       database = new URL(env.CAREBRIDGE_ACCEPTANCE_DATABASE_URL);
     } catch {
@@ -68,14 +68,13 @@ export function target(env, args) {
   let anon, service;
   if (mode !== "verify") {
     anon = checkedKey(env.CAREBRIDGE_ACCEPTANCE_ANON_KEY, ref, "anon");
-    service =
-      mode === "acceptance"
-        ? checkedKey(
-            env.CAREBRIDGE_ACCEPTANCE_SERVICE_ROLE_KEY,
-            ref,
-            "service_role",
-          )
-        : undefined;
+    service = ["acceptance", "storage-resume", "storage-anonymous-probe", "storage-anonymous-bearer-probe", "storage-remaining-v1"].includes(mode)
+      ? checkedKey(
+          env.CAREBRIDGE_ACCEPTANCE_SERVICE_ROLE_KEY,
+          ref,
+          "service_role",
+        )
+      : undefined;
     for (const role of ["DOCTOR", "ASSISTANT_A", "ASSISTANT_B", "OUTSIDER"]) {
       if (
         !/^[a-z0-9._+-]+@example.invalid$/i.test(
