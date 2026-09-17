@@ -14,7 +14,8 @@
     "format": "prettier --write \"app/**/*.{ts,tsx}\" \"components/{auth,booking,demo,prescriptions,public,shared,staff}/**/*.tsx\" \"lib/**/*.{ts,mjs}\" \"types/**/*.ts\" \"tests/**/*.mjs\" next.config.ts public/sw.js README.md LOCAL_SETUP.md",
     "test:db:local": "node scripts/test-database.mjs",
     "test:db:local:apply": "node scripts/test-database.mjs --apply",
-    "test:db:isolated": "node scripts/test-isolated-postgres.mjs"
+    "test:db:isolated": "node scripts/test-isolated-postgres.mjs",
+    "acceptance:hosted": "node scripts/hosted-acceptance/run.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

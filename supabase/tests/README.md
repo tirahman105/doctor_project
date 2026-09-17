@@ -37,3 +37,7 @@ Assistant payment verification remains an explicit operational permission, with 
 Compatibility still requires a real Supabase runtime: the isolated PostgreSQL harness uses Auth/Storage stubs and a superuser migration owner. Verify the hosted postgres role can create the required Storage policies, actual operation helper behavior, JWT claims and API grants before any hosted migration. The entire six-file series is not one transaction; each file is atomic and failed files must stop the procedure.
 
 References: [PostgreSQL default privileges](https://www.postgresql.org/docs/16/sql-alterdefaultprivileges.html) and [Supabase Storage policies](https://supabase.com/docs/guides/storage/security/access-control).
+
+## Phase 2B-1 local preparation
+
+The separate hosted acceptance harness is prepared, not executed. See [hosted acceptance instructions](../acceptance/README.md) for read-only SQL inventories, synthetic provisioning, user-JWT/Storage definitions, controlled two-session scripts, typed target gates and non-destructive archival cleanup. Existing local stub tests remain unchanged and cannot prove hosted compatibility. Hosted tests require separate explicit remote approval; their synthetic-account preparation does not authorize real-staff onboarding, UI integration or production setup. The hosted runner never applies migrations or creates Auth users.

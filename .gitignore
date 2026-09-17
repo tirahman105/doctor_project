@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Isolated Phase 2A PostgreSQL test cluster/logs (never publish).
 /.phase2a-postgres/
+
+# Synthetic hosted acceptance journals and private CA certificate copies.
+/.carebridge-acceptance/
