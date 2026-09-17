@@ -152,3 +152,63 @@ References: [PostgreSQL default privileges](https://www.postgresql.org/docs/16/s
 ## Phase 2B-1 local preparation
 
 The separate hosted acceptance harness is prepared, not executed. See [hosted acceptance instructions](supabase/acceptance/README.md) for read-only SQL inventories, synthetic provisioning, user-JWT/Storage definitions, controlled two-session scripts, typed target gates and non-destructive archival cleanup. Existing local stub tests remain unchanged and cannot prove hosted compatibility. Hosted tests require separate explicit remote approval; their synthetic-account preparation does not authorize real-staff onboarding, UI integration or production setup. The hosted runner never applies migrations or creates Auth users.
+
+
+## Phase 2B-2A: staff authentication only
+
+The default remains NEXT_PUBLIC_DATA_MODE=local. The existing demo role selector,
+local staff data and UI are preserved. Do not use real patient information.
+
+To manually test staff authentication, privately set in ignored .env.local:
+- NEXT_PUBLIC_DATA_MODE=supabase
+- NEXT_PUBLIC_SUPABASE_URL: the separate synthetic test project's HTTPS URL
+- NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: its sb_publishable_ key, or matching legacy anon JWT
+
+The publishable/anon key is intentionally browser-visible, not an administrative
+credential. RLS and active staff profiles enforce authorization. Never use a
+service-role/secret key here. No administrative key, SMS variable or database URL
+is required for this phase. CAREBRIDGE_ACCEPTANCE_* variables remain separate and
+are never consumed by application Auth. Restart Next.js after changing public env
+values; production builds require a rebuild. No real values belong in .env.example.
+
+In the test Dashboard, keep public email signup, anonymous sign-ins and unused
+providers disabled; keep email/password sign-in enabled. Only administrators create
+Doctor and Assistant Auth accounts and provision active database staff profiles.
+No patient Auth, signup, invitations or email-verification UI is implemented.
+The carebridge schema must be exposed with the reviewed RLS; carebridge_private
+must stay unexposed. No Dashboard settings are changed by this implementation.
+
+The app uses @supabase/ssr cookie clients and Next.js 16 proxy.ts for refresh.
+Server pages and proxy independently validate Auth identity with getUser and read
+the active staff profile using the user's JWT. Browser role metadata is ignored.
+Doctor-only settings/prescription routes enforce roles server-side even though
+these features are not connected. Every future data action must repeat this guard.
+Private staff responses use no-store; the public static-only service worker stays
+unchanged. A session monitor checks access on focus/every minute and after signout.
+Logout revokes the current refresh session and clears its cookies; already-issued
+JWTs can remain valid until expiry (Supabase behavior). Never treat logout as a
+revocation mechanism for leaked tokens. Protect local test credentials accordingly.
+
+In Supabase mode, staff pages retain the shell styling but show explicit unconnected
+states. No payments, prescriptions, uploads, SMS or clinical data are fetched.
+Public booking is explicitly a synthetic LOCAL DEMO using a separate localStorage
+key, not a silent database fallback. Patients never log in. Private uploads remain
+disabled. Re-select local and restart to return to the complete original demo.
+
+Manual browser checks (synthetic accounts only, not executed by this preparation):
+1. In local mode, check both demo roles, booking, navigation and logout unchanged.
+2. In supabase mode, open each staff URL while signed out: expect login redirect.
+3. Sign in Doctor and Assistant separately; confirm profile-derived role/name.
+4. Assistant direct access to settings/prescription redirects to dashboard.
+5. Outsider and inactive staff cannot enter; forged browser roles do not help.
+6. Refresh/navigate after access-token expiry with a valid refresh session: stay
+   signed in. Invalid/expired refresh sessions redirect to login.
+7. Logout, browser Back, refresh and another protected URL must not restore access.
+8. Confirm public booking stays local and no payment/prescription/upload action exists.
+
+Local tests use mocked Auth/PostgREST and do not assert hosted login success. Hosted
+acceptance testing remains stopped; storage-remaining-v1 is NOT EXECUTED. Auth browser
+verification and later persisted-data work require the synthetic target and review.
+
+References: https://supabase.com/docs/guides/auth/server-side/nextjs and
+https://nextjs.org/docs/app/api-reference/file-conventions/proxy .

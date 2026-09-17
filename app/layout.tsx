@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="bn">
       <body className="antialiased">
-        <DemoProvider>{children}</DemoProvider>
+        {process.env.NEXT_PUBLIC_DATA_MODE === 'local' ? <DemoProvider>{children}</DemoProvider> : children}
       </body>
     </html>
   );

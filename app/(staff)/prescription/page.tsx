@@ -1,7 +1,8 @@
-"use client";
-import Prescription from "@/components/prescriptions/prescription";
-import { useDemo } from "@/components/demo/demo-provider";
-export default function Page() {
-  const demo = useDemo();
-  return demo.role && <Prescription role={demo.role} notify={demo.notify} />;
+import UnconnectedState from "@/components/staff/unconnected-state";
+import DemoPage from "@/components/demo/prescription-page";
+import { requireStaff } from "@/lib/services/staff-session";
+export default async function Page() {
+  if (process.env.NEXT_PUBLIC_DATA_MODE === "local") return <DemoPage />;
+  await requireStaff("doctor");
+  return <UnconnectedState title="Prescription" />;
 }

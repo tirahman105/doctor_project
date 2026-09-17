@@ -67,3 +67,8 @@ Phase 2 starts with reviewed Supabase migrations, invite-only Supabase Auth, act
 ## Phase 2A preparation
 
 Versioned database/RLS/Storage migrations and local SQL tests are prepared under supabase/. They are not connected to the application. Read [SUPABASE_SETUP.md](SUPABASE_SETUP.md) and [schema review](supabase/SCHEMA_REVIEW.md) before approval. Do not run the legacy supabase/schema.sql. The local demo and its stored data remain unchanged. Production mode remains disabled.
+
+
+Phase 2B-2A adds explicit Supabase staff Auth mode. Local demo mode remains the default.
+See LOCAL_SETUP.md for private environment setup and synthetic browser checks. Staff
+data features remain unconnected; public booking stays an explicit local demo.
