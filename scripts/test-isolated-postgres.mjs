@@ -138,7 +138,7 @@ try {
   console.log(
     "Isolated PostgreSQL contract suite passed: " +
       passes +
-      " SQL assertions; six migrations applied.",
+      " SQL assertions; all ordered migrations applied.",
   );
   console.log(
     "Supabase Auth/Storage HTTP services were NOT exercised. Logs: " + cluster,

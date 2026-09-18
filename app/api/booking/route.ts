@@ -23,13 +23,17 @@ export async function GET() {
     const config = bookingConfig();
     if (!allow("availability-global", 120, 60000))
       return reply({ error: "Please try again shortly." }, 429);
-    const { data, error } = await bookingBackend().available();
-    if (error || !Array.isArray(data))
+    const { data, error } = await bookingBackend().options();
+    if (error || !data || !Array.isArray(data.slots))
       return reply({ error: "Available times could not be loaded." }, 503);
     const exp = Date.now() + 30 * 60000;
     return reply({
       challenge: challenge(config.secret),
-      slots: data.map((s) => ({
+      wallets: data.wallets,
+      advanceRequired: data.advanceRequired,
+      visibleDays: data.visibleDays,
+      paused: data.paused,
+      slots: data.slots.map((s) => ({
         token: token(config.secret, {
           kind: "slot",
           id: s.id,

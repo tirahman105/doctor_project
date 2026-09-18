@@ -8,12 +8,14 @@ export default function VisitActions({
   role,
   currentSlot,
   slots,
+  requiresPayment = false,
 }: {
   id: string;
   status: string;
   role: string;
   currentSlot: string;
   slots: SlotOption[];
+  requiresPayment?: boolean;
 }) {
   const [state, action, pending] = useActionState(changeVisit, {
       error: "",
@@ -49,7 +51,7 @@ export default function VisitActions({
               name="operation"
               value={value}
               key={value}
-              disabled={pending}
+              disabled={pending || (value === "confirm" && requiresPayment)}
             >
               {label}
             </button>

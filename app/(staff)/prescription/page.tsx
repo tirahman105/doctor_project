@@ -16,19 +16,50 @@ export default async function Page({
   if (process.env.NEXT_PUBLIC_DATA_MODE === "local") return <DemoPage />;
   await requireStaff("doctor");
   const params = await searchParams;
-  if (!params.appointment)
+  if (!params.appointment) {
+    const db = await clinicalClient();
+    const visits = await db
+      .from("appointments")
+      .select(
+        "id,starts_at,status,patients!appointments_patient_id_fkey(full_name)",
+      )
+      .in("status", ["checked_in", "completed"])
+      .order("starts_at", { ascending: false })
+      .limit(100);
     return (
       <section className="panel">
         <h1>Prescriptions</h1>
-        <p>
-          Open a checked-in or completed appointment from the queue to write its
-          prescription.
-        </p>
-        <Link className="btn primary" href="/dashboard">
-          Open appointments
-        </Link>
+        <p>Select a patient and appointment.</p>
+        {visits.error ? (
+          <p role="alert">Appointments could not be loaded.</p>
+        ) : (
+          <form action="/prescription">
+            <label>
+              Patient / appointment
+              <select name="appointment" required>
+                <option value="">Select appointment</option>
+                {visits.data?.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {
+                      (v.patients as unknown as { full_name: string })
+                        ?.full_name
+                    }{" "}
+                    ·{" "}
+                    {new Date(v.starts_at).toLocaleString("en-GB", {
+                      timeZone: "Asia/Dhaka",
+                    })}{" "}
+                    · {v.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="btn primary">Open prescription</button>
+          </form>
+        )}
+        <Link href="/dashboard">Appointment queue</Link>
       </section>
     );
+  }
   if (!z.string().uuid().safeParse(params.appointment).success)
     return (
       <section className="panel">
@@ -69,7 +100,7 @@ export default async function Page({
         const result = await db
           .from("prescription_versions")
           .select(
-            "*,prescription_items(medicine_name,dose,frequency,duration,instructions,sort_order)",
+            "*,prescription_items(medicine_name,strength,dosage_form,dose,frequency,duration,food_instruction,instructions,sort_order)",
           )
           .eq("prescription_id", roots.data[0].id)
           .order("version_no", { ascending: false });

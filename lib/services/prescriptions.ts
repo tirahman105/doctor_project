@@ -1,10 +1,7 @@
 import "server-only";
 import { operationalClient } from "./operations";
 import { z } from "zod";
-import {
-  prescriptionSchema,
-  encodeInstructions,
-} from "@/lib/validation/prescription.mjs";
+import { draftPrescriptionSchema } from "@/lib/validation/prescription.mjs";
 export async function clinicalClient() {
   const { db, staff } = await operationalClient();
   if (staff.role !== "doctor") throw Error("Doctor access required");
@@ -72,51 +69,18 @@ export async function beginPrescription(appointment: string) {
 }
 export async function savePrescription(input: unknown) {
   const db = await clinicalClient();
-  const v = prescriptionSchema.parse(input);
-  const saved = await db
-    .from("prescription_versions")
-    .update({
-      diagnosis: v.diagnosis,
-      investigations: v.investigations,
-      advice: v.advice,
-      follow_up_date: v.follow_up_date || null,
-    })
-    .eq("id", v.version)
-    .eq("status", "draft")
-    .eq("updated_at", v.expected)
-    .select("id")
-    .single();
-  if (saved.error || !saved.data) throw Error("Stale or finalized draft");
-  const old = await db
-    .from("prescription_items")
-    .select("id")
-    .eq("version_id", v.version);
-  if (old.error) throw Error("Draft save incomplete");
-  const inserted = await db
-    .from("prescription_items")
-    .insert(
-      v.medicines.map((m, index) => ({
-        version_id: v.version,
-        medicine_name: m.medicine_name,
-        dose: m.dose,
-        frequency: m.frequency,
-        duration: m.duration,
-        instructions: encodeInstructions(m),
-        sort_order: index,
-      })),
+  const v = draftPrescriptionSchema.parse(input);
+  const { version, expected, ...payload } = v;
+  const r = await db.rpc("save_practical_prescription", {
+    p_version: version,
+    p_expected: expected,
+    p_payload: payload,
+  });
+  if (r.error || typeof r.data !== "string")
+    throw Error(
+      "Draft could not be saved; reload if another editor changed it",
     );
-  if (inserted.error) throw Error("Draft save incomplete");
-  if (old.data?.length) {
-    const removed = await db
-      .from("prescription_items")
-      .delete()
-      .in(
-        "id",
-        old.data.map((x) => x.id),
-      )
-      .eq("version_id", v.version);
-    if (removed.error) throw Error("Draft save incomplete");
-  }
+  return r.data;
 }
 export async function finalizePrescription(version: string, expected: string) {
   z.string().uuid().parse(version);
@@ -137,7 +101,10 @@ export async function finalizePrescription(version: string, expected: string) {
     !current.data.prescription_items.length
   )
     throw Error("Save and reload before finalizing");
-  const r = await db.rpc("finalize_prescription", { p_version: version });
+  const r = await db.rpc("finalize_practical_prescription", {
+    p_version: version,
+    p_expected: expected,
+  });
   if (r.error) throw Error("Finalization failed");
 }
 export async function revisePrescription(prescription: string) {

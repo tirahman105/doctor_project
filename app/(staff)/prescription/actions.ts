@@ -6,6 +6,18 @@ import {
   finalizePrescription,
   revisePrescription,
 } from "@/lib/services/prescriptions";
+export async function autosaveDraft(input: unknown) {
+  try {
+    if (JSON.stringify(input).length > 100000) throw Error();
+    return { expected: await savePrescription(input), error: "" };
+  } catch {
+    return {
+      expected: "",
+      error:
+        "Autosave failed. Your edits remain here. Reload if another editor changed this draft; no changes from this save were applied.",
+    };
+  }
+}
 export async function prescriptionAction(
   _previous: { error: string; success: string },
   form: FormData,

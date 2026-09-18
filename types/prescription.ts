@@ -9,6 +9,12 @@ export type Medicine = {
   notes: string;
 };
 export type PrescriptionVersion = {
+  complaints?: string | null;
+  history?: string | null;
+  allergy?: string | null;
+  examination?: string | null;
+  referral?: string | null;
+  draft_payload?: { medicines: Medicine[] } | null;
   id: string;
   prescription_id: string;
   version_no: number;
@@ -28,6 +34,9 @@ export type PrescriptionVersion = {
     frequency: string;
     duration: string;
     instructions: string | null;
+    strength?: string | null;
+    dosage_form?: string | null;
+    food_instruction?: string | null;
     sort_order: number;
   }[];
 };

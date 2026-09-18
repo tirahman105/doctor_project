@@ -53,6 +53,7 @@ export function runLocalDatabaseTests(
         .flatMap((x) => [path.join("supabase/migrations", x), "supabase/tests/migration-boundary.sql"])
     : [];
   files.push("supabase/tests/authorization.sql");
+  files.push("supabase/tests/practice-workflows.sql");
   for (const file of files) {
     const result = spawnSync(
       command,

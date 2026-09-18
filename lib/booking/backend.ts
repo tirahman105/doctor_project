@@ -1,4 +1,12 @@
 import type { SlotOption } from "@/types/operations";
+import type { Wallet } from "@/types/settings";
+type BookingOptions = {
+  slots: SlotOption[];
+  wallets: Wallet[];
+  advanceRequired: boolean;
+  visibleDays: number;
+  paused: boolean;
+};
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { publicSupabaseConfig } from "@/lib/supabase/config.mjs";
@@ -12,6 +20,12 @@ type BookingArgs = {
   p_care_consent: boolean;
   p_teleconsent: boolean;
   p_sms_consent: boolean;
+  p_payment?: {
+    provider: string;
+    sender: string;
+    reference: string;
+    amount: number;
+  } | null;
 };
 type BookingDatabase = {
   carebridge: {
@@ -24,7 +38,14 @@ type BookingDatabase = {
         Args: { p_from: string; p_until: string };
         Returns: SlotOption[];
       };
-      submit_public_booking: { Args: BookingArgs; Returns: string };
+      submit_booking_v2: {
+        Args: Omit<BookingArgs, "p_sms_consent">;
+        Returns: string;
+      };
+      public_booking_options: {
+        Args: Record<never, never>;
+        Returns: BookingOptions;
+      };
     };
   };
 };
@@ -95,13 +116,22 @@ export function bookingBackend() {
       },
     }).schema("carebridge");
   return {
-    available: () => {
-      const start = new Date(Date.now() + 60000);
-      return client.rpc("available_slots", {
-        p_from: start.toISOString(),
-        p_until: new Date(start.getTime() + 30 * 86400000).toISOString(),
-      });
+    options: () => client.rpc("public_booking_options", {}),
+    available: async () => {
+      const r = await client.rpc("public_booking_options", {});
+      return { data: r.data?.slots ?? null, error: r.error };
     },
-    submit: (args: BookingArgs) => client.rpc("submit_public_booking", args),
+    submit: (args: BookingArgs) =>
+      client.rpc("submit_booking_v2", {
+        p_request: args.p_request,
+        p_name: args.p_name,
+        p_phone: args.p_phone,
+        p_slot: args.p_slot,
+        p_complaint: args.p_complaint,
+        p_policy_version: args.p_policy_version,
+        p_care_consent: args.p_care_consent,
+        p_teleconsent: args.p_teleconsent,
+        p_payment: args.p_payment ?? null,
+      }),
   };
 }

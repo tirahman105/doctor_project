@@ -1,11 +1,20 @@
 "use client";
-import { useActionState, useState } from "react";
+import {
+  useActionState,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { prescriptionAction } from "@/app/(staff)/prescription/actions";
+import {
+  prescriptionAction,
+  autosaveDraft,
+} from "@/app/(staff)/prescription/actions";
 import {
   decodeInstructions,
   prescriptionSchema,
+  draftPrescriptionSchema,
 } from "@/lib/validation/prescription.mjs";
 import type {
   Medicine,
@@ -35,7 +44,6 @@ export default function PrescriptionWorkspace({
   version: PrescriptionVersion | null;
   versions: { id: string; version_no: number; status: string }[];
 }) {
-  const router = useRouter();
   const [state, action, pending] = useActionState(prescriptionAction, {
     error: "",
     success: "",
@@ -46,51 +54,115 @@ export default function PrescriptionWorkspace({
     ),
     [advice, setAdvice] = useState(version?.advice ?? ""),
     [followUp, setFollowUp] = useState(version?.follow_up_date ?? "");
+  const [clinical, setClinical] = useState({
+    complaints: version?.complaints ?? "",
+    history: version?.history ?? "",
+    allergy: version?.allergy ?? "",
+    examination: version?.examination ?? "",
+    referral: version?.referral ?? "",
+  });
   const [medicines, setMedicines] = useState<Medicine[]>(
-    version?.prescription_items.length
-      ? [...version.prescription_items]
-          .sort((a, b) => a.sort_order - b.sort_order)
-          .map((m) => ({
-            medicine_name: m.medicine_name,
-            dose: m.dose,
-            frequency: m.frequency,
-            duration: m.duration,
-            ...decodeInstructions(m.instructions),
-          }))
-      : [{ ...blank }],
+    version?.draft_payload?.medicines ??
+      (version?.prescription_items.length
+        ? [...version.prescription_items]
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((m) => ({
+              ...decodeInstructions(m.instructions),
+              medicine_name: m.medicine_name,
+              dose: m.dose,
+              frequency: m.frequency,
+              duration: m.duration,
+              ...(m.strength !== null && m.strength !== undefined
+                ? {
+                    strength: m.strength,
+                    form: m.dosage_form ?? "",
+                    meal: m.food_instruction ?? "",
+                    notes: m.instructions ?? "",
+                  }
+                : {}),
+            }))
+        : [{ ...blank }]),
   );
-  const [finalizing, setFinalizing] = useState(false);
-  const storedMedicines = version?.prescription_items.length
-    ? [...version.prescription_items]
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .map((m) => ({
-          medicine_name: m.medicine_name,
-          dose: m.dose,
-          frequency: m.frequency,
-          duration: m.duration,
-          ...decodeInstructions(m.instructions),
-        }))
-    : [{ ...blank }];
-  const dirty =
-    diagnosis !== (version?.diagnosis ?? "") ||
-    investigations !== (version?.investigations ?? "") ||
-    advice !== (version?.advice ?? "") ||
-    followUp !== (version?.follow_up_date ?? "") ||
-    medicines.length !== storedMedicines.length ||
-    medicines.some((m, i) =>
-      (Object.keys(m) as (keyof Medicine)[]).some(
-        (k) => m[k] !== storedMedicines[i]?.[k],
-      ),
-    );
+  const [finalizing, setFinalizing] = useState(false),
+    [expected, setExpected] = useState(version?.updated_at ?? ""),
+    [saving, setSaving] = useState(false),
+    [saveError, setSaveError] = useState("");
   const finalized = version?.status === "finalized";
-  const payload = {
-    version: version?.id ?? "",
-    expected: version?.updated_at ?? "",
+  const content = JSON.stringify({
+    ...clinical,
     diagnosis,
     investigations,
     advice,
     follow_up_date: followUp,
     medicines,
+  });
+  const [savedContent, setSavedContent] = useState(content);
+  const dirty = content !== savedContent;
+  const expectedRef = useRef(expected),
+    flight = useRef(false);
+  const performSave = useCallback(
+    async (snapshot: string) => {
+      if (!version || finalized || flight.current) return;
+      const input = {
+        version: version.id,
+        expected: expectedRef.current,
+        ...JSON.parse(snapshot),
+      };
+      if (!draftPrescriptionSchema.safeParse(input).success) {
+        setSaveError("Check the draft field lengths and follow-up date.");
+        return;
+      }
+      flight.current = true;
+      setSaving(true);
+      setSaveError("");
+      try {
+        const result = await autosaveDraft(input);
+        if (result.error) {
+          setSaveError(result.error);
+          return;
+        }
+        expectedRef.current = result.expected;
+        setExpected(result.expected);
+        setSavedContent(snapshot);
+      } catch {
+        setSaveError(
+          "Autosave could not reach the server. Your edits remain here.",
+        );
+      } finally {
+        flight.current = false;
+        setSaving(false);
+      }
+    },
+    [version, finalized],
+  );
+  useEffect(() => {
+    if (!dirty || finalized || !version || saving || pending || saveError)
+      return;
+    const timer = setTimeout(() => void performSave(content), 1000);
+    return () => clearTimeout(timer);
+  }, [
+    content,
+    dirty,
+    finalized,
+    version,
+    saving,
+    pending,
+    saveError,
+    performSave,
+  ]);
+  useEffect(() => {
+    if (!dirty && !saving) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, saving]);
+  const payload = {
+    version: version?.id ?? "",
+    expected,
+    ...JSON.parse(content),
   };
   const valid = prescriptionSchema.safeParse(payload).success;
   function medicine(index: number, key: keyof Medicine, value: string) {
@@ -116,6 +188,25 @@ export default function PrescriptionWorkspace({
         </Link>
       </div>
       <div className="rx-controls">
+        {saveError && (
+          <p role="alert">
+            {saveError}{" "}
+            <button
+              type="button"
+              className="btn outline"
+              onClick={() => void performSave(content)}
+            >
+              Retry save
+            </button>
+            <button
+              type="button"
+              className="btn outline"
+              onClick={() => window.location.reload()}
+            >
+              Reload saved version
+            </button>
+          </p>
+        )}
         {pending && <p role="status">Saving prescription…</p>}
         {state.error && (
           <p role="alert">
@@ -123,7 +214,7 @@ export default function PrescriptionWorkspace({
             <button
               type="button"
               className="btn outline"
-              onClick={() => router.refresh()}
+              onClick={() => window.location.reload()}
             >
               Reload prescription
             </button>
@@ -175,7 +266,12 @@ export default function PrescriptionWorkspace({
                   corrections.
                 </p>
               ) : (
-                <form action={action}>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void performSave(content);
+                  }}
+                >
                   <input type="hidden" name="operation" value="save" />
                   <input
                     type="hidden"
@@ -187,6 +283,30 @@ export default function PrescriptionWorkspace({
                     disabled={pending}
                   >
                     <div className="form-grid">
+                      {(
+                        [
+                          "complaints",
+                          "history",
+                          "allergy",
+                          "examination",
+                          "referral",
+                        ] as const
+                      ).map((key) => (
+                        <label className="wide" key={key}>
+                          {key.charAt(0).toUpperCase() + key.slice(1)}
+                          <textarea
+                            aria-label={key}
+                            value={clinical[key]}
+                            maxLength={4000}
+                            onChange={(e) =>
+                              setClinical((c) => ({
+                                ...c,
+                                [key]: e.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+                      ))}
                       <label className="wide">
                         Diagnosis
                         <textarea
@@ -215,6 +335,36 @@ export default function PrescriptionWorkspace({
                     {medicines.map((m, i) => (
                       <fieldset className="rx-medicine" key={i}>
                         <legend>Medicine {i + 1}</legend>
+                        <div className="visit-buttons">
+                          <button
+                            type="button"
+                            className="btn outline"
+                            disabled={i === 0}
+                            onClick={() =>
+                              setMedicines((rows) => {
+                                const next = [...rows];
+                                [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                                return next;
+                              })
+                            }
+                          >
+                            Move up
+                          </button>
+                          <button
+                            type="button"
+                            className="btn outline"
+                            disabled={i === medicines.length - 1}
+                            onClick={() =>
+                              setMedicines((rows) => {
+                                const next = [...rows];
+                                [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                                return next;
+                              })
+                            }
+                          >
+                            Move down
+                          </button>
+                        </div>
                         <div className="form-grid">
                           {(
                             [
@@ -318,13 +468,15 @@ export default function PrescriptionWorkspace({
                       </label>
                     </div>
                   </fieldset>
-                  <button className="btn primary" disabled={pending || !valid}>
+                  <button className="btn primary" disabled={pending || saving}>
                     Save draft
                   </button>
                   <p>
-                    {dirty
-                      ? "Unsaved changes. Preview reflects your edits."
-                      : "Preview reflects the loaded record."}
+                    {saving
+                      ? "Autosaving…"
+                      : dirty
+                        ? "Unsaved changes. Preview reflects your edits."
+                        : "Draft saved."}
                   </p>
                 </form>
               )}
@@ -332,11 +484,7 @@ export default function PrescriptionWorkspace({
                 <form action={action}>
                   <input type="hidden" name="operation" value="finalize" />
                   <input type="hidden" name="version" value={version.id} />
-                  <input
-                    type="hidden"
-                    name="expected"
-                    value={version.updated_at}
-                  />
+                  <input type="hidden" name="expected" value={expected} />
                   <label className="booking-consent">
                     <input
                       type="checkbox"
@@ -350,6 +498,8 @@ export default function PrescriptionWorkspace({
                     className="btn primary"
                     disabled={
                       pending ||
+                      saving ||
+                      Boolean(saveError) ||
                       dirty ||
                       !valid ||
                       !finalizing ||
@@ -414,6 +564,15 @@ export default function PrescriptionWorkspace({
                 </p>
               </div>
               <div className="rx-body">
+                {Object.entries(clinical).map(
+                  ([key, value]) =>
+                    value && (
+                      <section key={key}>
+                        <h3>{key.charAt(0).toUpperCase() + key.slice(1)}</h3>
+                        <p>{value}</p>
+                      </section>
+                    ),
+                )}
                 <h3>Diagnosis</h3>
                 <p>{diagnosis || "—"}</p>
                 <h3>Investigations</h3>

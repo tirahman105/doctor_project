@@ -150,6 +150,7 @@ test("medicine strength/form/meal metadata round trips and validates, including 
     prescriptionSchema.safeParse({
       version: id,
       expected: "now",
+      complaints: "Synthetic complaint",
       diagnosis: "Synthetic",
       investigations: "",
       advice: "",
@@ -211,8 +212,8 @@ test("Doctor finalization requires current saved draft and revision uses version
   const { services, calls } = clinical("doctor");
   await services.finalizePrescription(id, "expected");
   assert.deepEqual(calls[1], {
-    name: "finalize_prescription",
-    args: { p_version: id },
+    name: "finalize_practical_prescription",
+    args: { p_version: id, p_expected: "expected" },
   });
   await services.revisePrescription(id);
   assert.deepEqual(calls[2], {

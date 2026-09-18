@@ -10,6 +10,7 @@ import {
   bookingDate,
 } from "@/lib/booking/availability.mjs";
 import Logo from "@/components/shared/logo";
+import type { Wallet } from "@/types/settings";
 type Slot = {
   token: string;
   type: string;
@@ -27,6 +28,12 @@ type Payload = {
   teleConsent: boolean;
   challenge: string;
   website: string;
+  payment?: {
+    provider: "bkash" | "nagad" | "rocket";
+    sender: string;
+    reference: string;
+    amount: number;
+  } | null;
 };
 const dateOf = (s: Slot) => bookingDate(s.startsAt);
 export default function PersistedBooking() {
@@ -42,6 +49,10 @@ export default function PersistedBooking() {
     [locked, setLocked] = useState(false),
     [receipt, setReceipt] = useState(""),
     [review, setReview] = useState<Payload | null>(null),
+    [wallets, setWallets] = useState<Wallet[]>([]),
+    [advanceRequired, setAdvanceRequired] = useState(false),
+    [visibleDays, setVisibleDays] = useState(30),
+    [provider, setProvider] = useState(""),
     [type, setType] = useState<"chamber" | "online">("chamber"),
     [date, setDate] = useState(""),
     [selected, setSelected] = useState("");
@@ -59,6 +70,11 @@ export default function PersistedBooking() {
         if (alive) {
           setSlots(data.slots);
           setChallenge(data.challenge);
+          setWallets(data.wallets);
+          setAdvanceRequired(data.advanceRequired);
+          setVisibleDays(data.visibleDays);
+          if (data.advanceRequired)
+            setProvider(data.wallets[0]?.provider ?? "");
           readyTimer = setTimeout(() => {
             if (alive) setReady(true);
           }, 1600);
@@ -110,10 +126,25 @@ export default function PersistedBooking() {
         teleConsent: fields.get("tele") === "on",
         challenge,
         website: String(fields.get("website") ?? ""),
+        payment: provider
+          ? {
+              provider: provider as Wallet["provider"],
+              sender: String(fields.get("sender") ?? ""),
+              reference: String(fields.get("reference") ?? ""),
+              amount: Number(fields.get("amount")),
+            }
+          : null,
       };
-    if (!bookingSchema.safeParse(payload).success) {
+    if (
+      !bookingSchema.safeParse(payload).success ||
+      (advanceRequired && !payload.payment) ||
+      (!locked &&
+        payload.payment &&
+        payload.payment.amount !==
+          slots.find((s) => s.token === payload.slot)?.fee)
+    ) {
       setError(
-        "Check your name, Bangladesh mobile number, selected time and consent.",
+        "Check your name, mobile, appointment time, payment evidence and consent.",
       );
       return;
     }
@@ -233,7 +264,8 @@ export default function PersistedBooking() {
                         <CalendarDays aria-hidden="true" />
                         <h2>No appointments available</h2>
                         <p>
-                          No {type} appointments are available in the next 30
+                          No {type} appointments are available in the next{" "}
+                          {visibleDays}
                           days. Try another appointment type or check again
                           later.
                         </p>
@@ -317,10 +349,103 @@ export default function PersistedBooking() {
                       Short reason (optional)
                       <textarea name="reason" maxLength={300} rows={3} />
                     </label>
+                    <section className="wide booking-payment">
+                      <h2>Payment</h2>
+                      <p>
+                        Appointment fee: BDT{" "}
+                        {slots.find((s) => s.token === activeSelected)?.fee ??
+                          "—"}
+                        .{" "}
+                        {advanceRequired
+                          ? "Advance payment evidence is required. Staff will verify it before confirming."
+                          : "Advance payment is optional; you may pay at your consultation."}
+                      </p>
+                      {wallets.length > 0 && (
+                        <>
+                          <label>
+                            Payment method
+                            <select
+                              value={provider}
+                              onChange={(e) => setProvider(e.target.value)}
+                              required={advanceRequired}
+                            >
+                              <option value="">
+                                {advanceRequired
+                                  ? "Select payment method"
+                                  : "Pay at consultation"}
+                              </option>
+                              {wallets
+                                .filter((w) => w.enabled)
+                                .map((w) => (
+                                  <option value={w.provider} key={w.provider}>
+                                    {w.provider}
+                                  </option>
+                                ))}
+                            </select>
+                          </label>
+                          {provider && (
+                            <>
+                              <p>
+                                Send to{" "}
+                                <strong>
+                                  {
+                                    wallets.find((w) => w.provider === provider)
+                                      ?.account_number
+                                  }
+                                </strong>{" "}
+                                (
+                                {
+                                  wallets.find((w) => w.provider === provider)
+                                    ?.account_type
+                                }
+                                )
+                              </p>
+                              <p>
+                                {
+                                  wallets.find((w) => w.provider === provider)
+                                    ?.instructions
+                                }
+                              </p>
+                              <div className="form-grid">
+                                <label>
+                                  Sender mobile
+                                  <input
+                                    name="sender"
+                                    type="tel"
+                                    required
+                                    maxLength={14}
+                                    placeholder="01XXXXXXXXX"
+                                  />
+                                </label>
+                                <label>
+                                  Transaction ID
+                                  <input
+                                    name="reference"
+                                    required
+                                    maxLength={80}
+                                    autoComplete="off"
+                                  />
+                                </label>
+                                <label>
+                                  Amount paid (BDT)
+                                  <input
+                                    name="amount"
+                                    type="number"
+                                    required
+                                    min="0.01"
+                                    step="0.01"
+                                  />
+                                </label>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </section>
                   </div>
                   <p>
-                    No advance payment is collected with this request. Staff
-                    will explain payment arrangements separately.
+                    Payment evidence is not proof of payment. Staff review and
+                    appointment confirmation are recorded separately.
                   </p>
                   <label className="booking-consent">
                     <input type="checkbox" name="care" required />I agree to
@@ -356,10 +481,16 @@ export default function PersistedBooking() {
                       <dd>{review.phone}</dd>
                       <dt>Reason</dt>
                       <dd>{review.reason || "Not provided"}</dd>
+                      <dt>Payment</dt>
+                      <dd>
+                        {review.payment
+                          ? `${review.payment.provider} · BDT ${review.payment.amount} · ${review.payment.reference} (pending verification)`
+                          : "Pay at consultation"}
+                      </dd>
                     </dl>
                     <p>
-                      Please check these details before submitting. No payment
-                      is collected.
+                      Please check these details before submitting. Payment
+                      evidence awaits staff verification.
                     </p>
                     {!locked && (
                       <button

@@ -18,6 +18,14 @@ export type OperationalAppointment = {
   fee_bdt: number;
   status: string;
   slot_id: string;
+  advance_required: boolean;
   patients: OperationalPatient;
-  payments: { status: string }[];
+  payments: {
+    id: string;
+    status: string;
+    provider: string;
+    amount_bdt: number;
+    transaction_reference: string;
+    sender_phone: string | null;
+  }[];
 };

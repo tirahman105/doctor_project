@@ -15,7 +15,7 @@ test("availability API maps RPC fields, preserves types, and never caches empty 
     "@/lib/booking/backend": {
       bookingConfig: () => ({ secret: "test" }),
       bookingBackend: () => ({
-        available: async () => ({ data: rows, error: null }),
+        options: async () => ({ data: {slots:rows,wallets:[],advanceRequired:false,visibleDays:30,paused:false}, error: null }),
       }),
     },
     "@/lib/booking/protection.mjs": {

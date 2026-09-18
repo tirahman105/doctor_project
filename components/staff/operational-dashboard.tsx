@@ -2,6 +2,7 @@ import RefreshAppointments from "@/components/staff/refresh-appointments";
 import Link from "next/link";
 import { CalendarDays, CheckCircle2, Clock3 } from "lucide-react";
 import VisitActions from "./visit-actions";
+import PaymentActions from "./payment-actions";
 import type { OperationalAppointment, SlotOption } from "@/types/operations";
 export default function OperationalDashboard({
   rows,
@@ -128,12 +129,17 @@ export default function OperationalDashboard({
                   </div>
                 </div>
                 <VisitActions
+                  requiresPayment={
+                    a.advance_required &&
+                    !a.payments.some((p) => p.status === "verified")
+                  }
                   id={a.id}
                   currentSlot={a.slot_id}
                   status={a.status}
                   role={role}
                   slots={slots}
                 />
+                <PaymentActions payments={a.payments} role={role} />
                 {role === "doctor" && (
                   <Link
                     className="btn outline"

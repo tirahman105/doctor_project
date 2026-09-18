@@ -11,8 +11,8 @@ const migrations = files.map((name) => ({
   sql: fs.readFileSync("supabase/migrations/" + name, "utf8"),
 }));
 const all = migrations.map((x) => x.sql).join("\n");
-test("STATIC: six ordered transactional forward-only migrations, no destructive baseline", () => {
-  assert.equal(files.length, 6);
+test("STATIC: six baseline migrations plus forward extensions, no destructive baseline", () => {
+  assert.equal(files.length, 7);
   for (const { name, sql } of migrations) {
     assert.match(name, /^\d{14}_[a-z_]+\.sql$/);
     assert.match(sql, /\bbegin;/i);
