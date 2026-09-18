@@ -1,5 +1,16 @@
 # CareBridge Doctor Practice
 
+## Current synthetic Supabase workflow
+
+Persisted public booking, Doctor/Assistant appointment operations and Doctor-only
+versioned prescriptions now work in explicit Supabase test mode. Local demo mode
+remains available, with no silent fallback. Production mode is disabled.
+
+See [WORKFLOW_RESULTS.md](WORKFLOW_RESULTS.md) for current behavior, the exact
+appointment-visibility diagnosis and completed verification. The earlier phase
+notes below are historical; their unconnected-feature statements are superseded
+by the workflow report.
+
 CareBridge is an explicitly selected **local demo**, built with standard Next.js App Router, React, TypeScript, and Tailwind CSS. The existing Bengali/English visual design is retained. Use synthetic data only.
 
 ## Local start (Windows PowerShell)
@@ -72,3 +83,7 @@ Versioned database/RLS/Storage migrations and local SQL tests are prepared under
 Phase 2B-2A adds explicit Supabase staff Auth mode. Local demo mode remains the default.
 See LOCAL_SETUP.md for private environment setup and synthetic browser checks. Staff
 data features remain unconnected; public booking stays an explicit local demo.
+
+
+Phase 2B-2B connects synthetic public booking and operational staff lists in Supabase
+mode. See LOCAL_SETUP.md for the additional server-only booking configuration.

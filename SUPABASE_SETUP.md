@@ -212,3 +212,71 @@ verification and later persisted-data work require the synthetic target and revi
 
 References: https://supabase.com/docs/guides/auth/server-side/nextjs and
 https://nextjs.org/docs/app/api-reference/file-conventions/proxy .
+
+
+## Phase 2B-2B: persisted synthetic patients and appointments
+
+In supabase mode /booking now submits to the restricted public booking RPC. Local
+mode retains the original complete demo. No patient account/email is involved.
+Staff dashboard/date filter and paginated directory read operational fields using
+staff JWTs and RLS; no intake, clinical or prescription data is selected.
+
+Privately add server-only configuration to ignored .env.local:
+- SUPABASE_SERVICE_ROLE_KEY: test-project service-role key or secret key
+- CAREBRIDGE_APP_TEST_PROJECT_REF: the matching separate test-project reference
+- BOOKING_ENVIRONMENT: synthetic-test-only
+- BOOKING_ALLOWED_ORIGIN: exact browser origin, including local port, no trailing slash
+- BOOKING_TOKEN_SECRET: independently generated random secret of at least 32 characters
+Keep existing public Supabase Auth variables. Never reuse or expose a privileged key
+in NEXT_PUBLIC variables. Acceptance-test variables remain separate. Missing booking
+configuration gives an unavailable state, never a demo fallback. Restart the app.
+
+Existing future open slots/schedules must be prepared by the authorized Doctor or
+administrator using the reviewed schema. This phase creates no schedules or seed
+records remotely. Empty availability is a normal state. Times use Asia/Dhaka.
+The public form collects no advance payment, so no payment/reference fields apply.
+The reviewed RPC has no public payment parameters; payment intake needs a separate
+reviewed extension if later required. Appointment changes never verify payment.
+
+The reviewed booking RPC atomically creates patient/contact/consent/appointment and
+its mandatory minimal intake row. Optional blank reason becomes "No reason provided."
+This is reuse of the existing operation, not a new clinical-record workflow. Care and
+online consultation consent are explicit; SMS consent is always false. No SMS is queued.
+Public callers cannot supply patient IDs, staff IDs, actors, appointment/payment status
+or policy versions. Signed slot tokens bind selections; form request IDs are server-minted.
+Same-ID retries use database idempotency; success returns a non-sensitive HMAC receipt,
+not the internal appointment ID. Never log request bodies, credentials or raw errors.
+
+Basic controls: exact Origin/Fetch Metadata checks, bounded streamed JSON, strict
+allowlists, signed expiring form/slot tokens, minimum form age, honeypot, and bounded
+process-local global/phone/request rate limits using hashed keys. These are synthetic
+local-testing controls, not distributed production bot protection. A durable shared
+limiter and independently reviewed bot protection are pre-deployment requirements.
+Retries keep the original form values and key after uncertain responses. Tokens expire
+after 30 minutes; if uncertain after expiry/reload, contact staff rather than rebook.
+
+Staff operations use change_appointment with their own JWT. Confirm/reschedule/cancel/
+check-in/no-show are available according to database state. Completed requires Doctor
+and checked_in; an Assistant cannot complete. Reschedule pending/confirmed visits to
+pending. Database exclusion constraints and locking remain the double-booking boundary.
+No migrations or policy changes are made. Concurrent conflicts surface as a safe error;
+no silent retry with a new request ID occurs. Reschedule availability requires the
+restricted backend availability RPC; no service-role client is passed to a browser.
+
+Manual synthetic tests (not executed during implementation):
+1. Public booking: no login/email; select chamber/online date/time; verify required
+   mobile/consent and optional reason. Double-click/retry the same request; confirm
+   only one patient/appointment. Receipt contains no personal details.
+2. Doctor/Assistant: open booked date, check directory/contact, confirm/cancel/no-show.
+   Check in before Doctor completion; Assistant completion remains denied.
+3. Reschedule pending/confirmed to an available slot; status becomes pending and
+   payment state stays unchanged. Two sessions compete for one slot: only one wins.
+4. Outsider/inactive/logged-out callers cannot read staff data or mutate visits.
+5. Empty dates/slots, expired form, malformed/extra fields, rate-limit and network
+   failure show safe errors. No payment, prescription, upload or SMS actions appear.
+6. Re-select local mode and restart: original demo remains functional.
+
+No hosted tests, remote records, migrations or deployment were executed by this work.
+Storage continuation stays NOT EXECUTED. Remaining work: hosted synthetic acceptance,
+reviewed payment-reference intake if needed, schedule management UI, stronger abuse
+controls before production, and later separately scoped clinical/storage/SMS features.

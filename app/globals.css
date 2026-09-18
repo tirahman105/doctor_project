@@ -61,3 +61,33 @@
 .auth-page-links{gap:4px;margin-bottom:18px}
 }
 @media(prefers-reduced-motion:reduce){.auth-shell .app-sidebar{transition:none}}
+
+/* Persisted operational views; no clinical or payment mutation controls. */
+.visit-filter,.visit-buttons{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.visit-filter label,.visit-actions label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.visit-filter input,.visit-actions select{border:1px solid var(--line);border-radius:9px;padding:10px;background:white;max-width:100%}
+.operational-visit{padding:20px 0;border-top:1px solid var(--line)}
+.visit-summary{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:18px;align-items:center}
+.operational-visit p{font-size:13px;color:var(--muted);line-height:1.6;margin:8px 0}
+.visit-actions{margin-top:10px}.visit-actions form+form{margin-top:15px}.visit-actions select{margin-bottom:10px}
+.operational-empty{padding:30px 0;color:var(--muted)}
+.public-booking-fields{border:0;padding:0;margin:0}.public-booking-fields textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px}
+.booking-consent{display:flex;flex-direction:row;align-items:flex-start;gap:10px;line-height:1.6;margin:16px 0;font-size:13px}
+.booking-consent input{width:18px;height:18px;flex-shrink:0;margin-top:2px}
+.booking-honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+.booking-error{color:#9e3434;line-height:1.6}.booking-receipt{overflow-wrap:anywhere}.booking-receipt>svg{color:var(--green);width:40px;height:40px}
+.booking-header{height:auto;min-height:76px;gap:12px;padding:16px max(16px,calc((100% - 1120px)/2));grid-template-columns:1fr auto 1fr}
+.booking-review{padding:18px 0}.booking-review dt{font-size:12px;color:var(--muted);margin-top:12px}.booking-review dd{margin:3px 0 0;overflow-wrap:anywhere}.booking-review .btn{margin-bottom:18px}
+.operational-heading,.persisted-rx .welcome-row{flex-wrap:wrap;gap:14px}.operational-heading .btn,.persisted-rx .welcome-row .btn{font-size:13px;min-height:44px}.persisted-rx .rx-controls .form-grid input,.persisted-rx .rx-controls .form-grid select{min-height:44px}
+.operational-panel .panel-head{align-items:flex-start;flex-wrap:wrap;gap:18px}.operational-panel .visit-filter{flex-wrap:wrap;max-width:100%}.operational-panel .visit-filter input{min-width:0;max-width:100%}.operational-panel .visit-summary>div{min-width:0;overflow-wrap:anywhere}.operational-panel .btn{min-height:44px}
+.rx-medicine{border:1px solid var(--line);border-radius:12px;padding:14px;margin:16px 0}.rx-medicine legend{font-weight:700}.persisted-rx .form-grid{margin:16px 0}.persisted-rx .form-grid>*{min-width:0}.persisted-rx textarea{min-height:80px}.persisted-rx .btn{margin:6px 6px 6px 0}.version-links{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0}.version-links a{color:var(--green);text-decoration:underline}.version-links [aria-current]{font-weight:bold}.rx-patient{border-bottom:1px solid var(--line);padding:12px 0}.rx-patient p{font-size:12px}.persisted-rx-paper p{white-space:pre-wrap;overflow-wrap:anywhere}.persisted-rx-paper .rx-item{break-inside:avoid;overflow-wrap:anywhere}.persisted-rx .panel-head,.visit-filter{flex-wrap:wrap;gap:10px}
+@media(max-width:1050px){.persisted-rx .rx-layout{grid-template-columns:1fr}}
+@media print{.persisted-rx-paper{position:static!important;inset:auto!important;overflow:visible!important}}
+@media print{@page{size:A4;margin:15mm}.persisted-rx .rx-controls,.app-sidebar,.app-topbar{display:none!important}.app-main{margin:0!important}.app-content{padding:0!important;max-width:none!important}.persisted-rx .rx-layout{display:block!important}.persisted-rx-paper{box-shadow:none!important;padding:0!important;width:100%!important;min-height:0!important}.persisted-rx-paper .rx-letterhead{break-after:avoid}.persisted-rx-paper{font-size:11pt}.persisted-rx-paper footer{margin-top:20px}body:has(.persisted-rx){background:white!important}}
+.booking-header>span:last-child{justify-self:end;color:var(--muted);font-size:13px}
+.booking-back{display:inline-flex;align-items:center;justify-content:center;gap:6px;justify-self:start;min-width:44px;min-height:44px;padding:8px;border-radius:10px;color:var(--green)}
+.booking-back svg{width:18px;height:18px;flex:none}.booking-back:hover{background:var(--pale)}.booking-back:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.booking-availability{padding:22px 12px;text-align:center;background:var(--pale);border-radius:12px;color:var(--ink)}.booking-availability>svg{color:var(--green)}.booking-availability h2{font-size:19px;margin:8px 0}.booking-availability p{font-size:14px;line-height:1.6;color:var(--muted)}
+.public-booking-fields .form-grid>*{min-width:0}.public-booking-fields select{max-width:100%;min-height:44px}
+@media(max-width:430px){.booking-header{grid-template-columns:auto minmax(0,1fr);gap:8px}.booking-header .brand{justify-self:end}.booking-header>span:last-child{grid-column:1/-1;justify-self:end}.booking-header .brand small{display:none}}
+@media(max-width:760px){.visit-summary{grid-template-columns:1fr;gap:6px}.visit-filter{width:100%}.visit-buttons .btn{padding:10px;font-size:12px}.visit-actions select{width:100%}}
